@@ -5,6 +5,8 @@ import { polyfill } from 'react-lifecycles-compat';
 import Child from './DrawerChild';
 import { IDrawerProps, IDrawerChildProps } from './IDrawerPropTypes';
 
+type IStringOrHtmlElement = string | HTMLElement;
+
 interface IState {
   open: boolean;
 }
@@ -22,8 +24,8 @@ class DrawerWrapper extends React.Component<IDrawerProps, IState> {
     level: 'all',
     duration: '.3s',
     ease: 'cubic-bezier(0.78, 0.14, 0.15, 0.86)',
-    onChange: () => { },
-    afterVisibleChange: () => { },
+    onChange: () => {},
+    afterVisibleChange: () => {},
     handler: (
       <div className="drawer-handle">
         <i className="drawer-handle-icon" />
@@ -38,8 +40,10 @@ class DrawerWrapper extends React.Component<IDrawerProps, IState> {
     forceRender: false,
   };
 
-  public static getDerivedStateFromProps(props: IDrawerProps,
-    { prevProps }: { prevProps: IDrawerProps }) {
+  public static getDerivedStateFromProps(
+    props: IDrawerProps,
+    { prevProps }: { prevProps: IDrawerProps },
+  ) {
     const newState: {
       open?: boolean;
       prevProps: IDrawerProps;
@@ -53,15 +57,50 @@ class DrawerWrapper extends React.Component<IDrawerProps, IState> {
   }
 
   public dom: HTMLElement | null;
+  private getContainer:
+    | IStringOrHtmlElement
+    | (() => IStringOrHtmlElement)
+    | null
+    | false;
 
   constructor(props: IDrawerProps) {
     super(props);
-    const open = typeof props.open !== 'undefined' ? props.open : !!props.defaultOpen;
+    const open =
+      typeof props.open !== 'undefined' ? props.open : !!props.defaultOpen;
     this.state = {
       open,
     };
+    this.getContainer = props.getContainer;
     if ('onMaskClick' in props) {
       console.warn('`onMaskClick` are removed, please use `onClose` instead.');
+    }
+  }
+
+  public componentDidUpdate() {
+    const { getContainer } = this.props;
+    if (getContainer) {
+      if (
+        typeof getContainer === 'string' &&
+        typeof this.getContainer === 'string' &&
+        document.querySelectorAll(getContainer)[0] !==
+          document.querySelectorAll(this.getContainer)[0]
+      ) {
+        this.getContainer = getContainer;
+      } else if (
+        typeof getContainer === 'function' &&
+        typeof this.getContainer === 'function' &&
+        getContainer() !== this.getContainer()
+      ) {
+        this.getContainer = getContainer;
+      } else if (
+        typeof getContainer === 'object' &&
+        getContainer instanceof window.HTMLElement &&
+        typeof this.getContainer === 'object' &&
+        this.getContainer instanceof window.HTMLElement &&
+        getContainer !== this.getContainer
+      ) {
+        this.getContainer = getContainer;
+      }
     }
   }
 
@@ -76,7 +115,7 @@ class DrawerWrapper extends React.Component<IDrawerProps, IState> {
         open: !open,
       });
     }
-  }
+  };
 
   private onClose = (e: React.MouseEvent | React.KeyboardEvent) => {
     const { onClose, open } = this.props;
@@ -88,7 +127,7 @@ class DrawerWrapper extends React.Component<IDrawerProps, IState> {
         open: false,
       });
     }
-  }
+  };
 
   // tslint:disable-next-line:member-ordering
   public render() {
@@ -106,7 +145,9 @@ class DrawerWrapper extends React.Component<IDrawerProps, IState> {
       return (
         <div
           className={wrapperClassName}
-          ref={c => { this.dom = c; }}
+          ref={c => {
+            this.dom = c;
+          }}
         >
           <Child
             {...props}
@@ -135,7 +176,9 @@ class DrawerWrapper extends React.Component<IDrawerProps, IState> {
             {...props}
             {...rest}
             open={visible !== undefined ? visible : open}
-            afterVisibleChange={afterClose !== undefined ? afterClose : props.afterVisibleChange}
+            afterVisibleChange={
+              afterClose !== undefined ? afterClose : props.afterVisibleChange
+            }
             handler={handler}
             onClose={this.onClose}
             onHandleClick={this.onHandleClick}
